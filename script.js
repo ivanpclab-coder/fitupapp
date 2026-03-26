@@ -27,6 +27,8 @@ const temas = {
     
 };
 
+
+
 const color = temas[id] || '#00d1ff';
 
 if(container) {
@@ -92,52 +94,97 @@ function actualizarWidgetEjercicios() {
     const countTxt = document.getElementById('dash-rutina-count');
     const msgFinal = document.getElementById('msg-finalizado');
     
-    // Seguridad: Si no encuentra los elementos en el HTML, detiene la función para no dar error
     if(!actVal || !listCont || !barra) return; 
 
-    // 1. Mostrar Actividad y Nivel Limpios (provenientes del objeto user)
+    // --- DICCIONARIO UNIFICADO (Nombres exactos .png) ---
+    const iconosRutinas = {
+        "Caminar": "CAMINAR o TROTAR__.png",
+        "Caminar en plano": "CAMINAR o TROTAR__.png",
+        "Caminar en subida": "CAMINAR EN SUBIDA.png",
+        "Caminar y trotar": "CAMINAR o TROTAR__.png",
+        "Trotar": "CAMINAR o TROTAR__.png",
+        "Correr y trotar": "CAMINAR o TROTAR__.png",
+        "Carrera rápida": "carrera_rápida.png",
+        "Carrera rápida ida y vuelta": "carrera_rápida_ida_y_vuelta.png",
+        "Velocidad": "VELOCIDAD.png",
+        "Saltos de tijera": "saltos_de_tijera.png",
+        "Saltos suaves": "saltos_suaves.png",
+        "Saltos cortos": "SALTOS CORTOS.png",
+        "Pasos de lado": "pasos_de_lado.png",
+        "Rodillas al pecho": "RODILLAS AL PECHO.png",
+        "Rodillas arriba": "RODILLAS AL PECHO.png",
+        "Talones al glúteo": "TALONES AL GLUTEO.png",
+        "Sentadillas": "SENTADILLA.png",
+        "Lagartijas": "lagartijas.png",
+        "Abdominales": "ABDOMINALES.png",
+        "Plancha": "PLANCHA.png",
+        "Salto con lagartija": "SALTO CON LAGARTIJA.png",
+        "Calentamiento": "calentamiento.png",
+        "Subir cuestas cortas": "SUBIR CUESTAS CORTAS.png",
+        "Subir gradas": "SUBIR GRADAS.png",
+        "Pasos largos hacia arriba": "PASOSLARGOSARRIBA.png",
+        "Estiramiento fijo": "estiramiento_fijo.png",
+        "Círculos de hombros": "circulo_de_hombros.png",
+        "Equilibrio en un pie": "EQUILIBRIO EN UN PIE.png",
+        "Arqueo de espalda": "ARQUEO DE ESPALDA.png",
+        "Pasos largos": "PasosLargosFlexi.png",
+        "Apertura de cadera": "APERTURA DE CADERA.png",
+        "Burbujas": "BURBUJAS.png",
+        "Patadas tabla": "PATADAS TABLA.png",
+        "Nado suave": "NADO SUAVE O CONTINUO.png",
+        "Nado continuo": "nado_continuo.png",
+        "Solo brazada": "BRAZADA.png"
+    };
+
     actVal.innerText = (user.activity || "Bajo").toUpperCase();
     nivVal.innerText = (user.level || "Básico").toUpperCase();
 
-    // 2. Limpiar el contenedor de la lista antes de llenarlo
     listCont.innerHTML = "";
     let completados = 0;
 
-    // 3. Validar si hay rutinas seleccionadas
     if(!user.routines || user.routines.length === 0) {
         listCont.innerHTML = "<p style='font-size:0.7rem; color:#999; text-align:center;'>No hay rutinas activas.</p>";
-        barra.style.width = "0%";
-        countTxt.innerText = "0/0";
-        msgFinal.style.display = "none";
+        actualizarProgresoRutina(0, 0);
         return;
     }
 
-    // 4. Crear los elementos de la lista uno por uno
     user.routines.forEach((rutinaNombre, i) => {
         const div = document.createElement('div');
-        // Estilo de cada fila de ejercicio
+        
+        // --- LÓGICA DE BÚSQUEDA DE IMAGEN ---
+        // Extraemos el nombre antes de los ":" y antes de cualquier "("
+        const nombreLimpio = rutinaNombre.split(':')[0].split('(')[0].trim();
+        const rutaImagen = iconosRutinas[nombreLimpio];
+
+        const imgHTML = rutaImagen 
+            ? `<img src="${rutaImagen}" style="width:35px; height:35px; border-radius:8px; object-fit:cover; margin-right:12px; border:1px solid #00D1FF; background:white;">`
+            : `<div style="width:35px; margin-right:12px;"></div>`;
+
+        div.className = "rutina-item-dash";
         div.style = `
             background: white; 
-            padding: 12px; 
+            padding: 10px; 
             border-radius: 12px; 
             border: 1px solid #AABFC1; 
-            font-size: 0.8rem; 
+            font-size: 0.75rem; 
             font-weight: 800; 
             cursor: pointer; 
             display: flex; 
-            justify-content: space-between; 
             align-items: center;
+            margin-bottom: 8px;
             transition: 0.3s;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.02);
         `;
         
-        div.innerHTML = `<span>${rutinaNombre}</span> <span class="status-icon">⭕</span>`;
+        div.innerHTML = `
+            ${imgHTML}
+            <span style="flex:1;">${rutinaNombre}</span> 
+            <span class="status-icon">⭕</span>
+        `;
         
-        // Evento al hacer clic en el ejercicio (Marcar como completado)
         div.onclick = function() {
             if(!this.dataset.done) {
-                this.dataset.done = "true"; // Marcador interno
-                this.style.background = "#E0F7FA"; // Color cian clarito
+                this.dataset.done = "true";
+                this.style.background = "#E0F7FA"; 
                 this.style.borderColor = "#00D1FF";
                 this.style.opacity = "0.7";
                 this.querySelector('span').style.textDecoration = "line-through";
@@ -147,26 +194,23 @@ function actualizarWidgetEjercicios() {
                 actualizarProgresoRutina(completados, user.routines.length);
             }
         };
-        
-
-
         listCont.appendChild(div);
     });
 
-    // 5. Función interna para mover la barra y mostrar el mensaje final
     function actualizarProgresoRutina(done, total) {
-        const porcentaje = (done / total) * 100;
+        const porcentaje = total > 0 ? (done / total) * 100 : 0;
         barra.style.width = porcentaje + "%";
         countTxt.innerText = `${done}/${total}`;
         
-        if(done === total) {
-            msgFinal.style.display = "block";
-            // Efecto visual de éxito en la barra
+        if(total > 0 && done === total) {
+            if(msgFinal) msgFinal.style.display = "block";
             barra.style.background = "linear-gradient(90deg, #00D1FF, #00FF88)";
+        } else {
+            if(msgFinal) msgFinal.style.display = "none";
+            barra.style.background = "var(--cian)";
         }
     }
 
-    // Reset inicial de la barra y contador al cargar la pantalla
     actualizarProgresoRutina(0, user.routines.length);
 }
 
@@ -407,7 +451,7 @@ function renderHidratacion() {
     
     // 3. Llenado visual de la botella
     
-
+    
 
     const porcentaje = Math.round((user.current / user.goal) * 100) || 0;
     
@@ -418,7 +462,19 @@ function renderHidratacion() {
     if (liquid) liquid.style.height = Math.min(100, porcentaje) + "%";
     if (text) text.innerText = porcentaje + "%";
 
-   
+   // Localiza donde se genera el HTML de la hidratación y usa esto:
+let htmlHidratacion = `
+    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; background: transparent !important; border: none !important; box-shadow: none !important;">
+        <img src="boteverde.png" alt="Botellas" 
+             style="width: 120px; 
+                    height: auto; 
+                    display: block; 
+                    margin: 0 auto; 
+                    filter: none !important; 
+                    background: transparent !important; 
+                    border: none !important;">
+    </div>
+`;
 }
 
 // Función para sumar 500ml
@@ -596,41 +652,44 @@ function previewPhoto(input) {
 // --- BASE DE DATOS MÁSTER ---
 const rutinasDB = {
     "Básico": {
-        "CANCHA": { ej: ["Caminar: 3x1'", "Jumping Jacks: 3x15", "Skipping: 3x20", "Laterales: 3x10m", "Saltos cortos: 3x15", "Sprint(Ida/Vuelta): 3x20"], desc: "Descanso: 30-45 segundos." },
-        "PISTA": { ej: ["Caminar-Trote: 3x1", "Trote continuo: 3x2", "Velocidad: 4x30m.", "Skipping Rodillas: 3x20", "Correr-Trotar: 3 rep", "Talones al glúteo: 3x30"], desc: "Descanso: 1 minuto (en velocidad)." },
-        "MONTAÑA": { ej: ["Caminar Llano: 3x2", "Subir Pendientes: 3 cortas", "Escaleras: 3 subidas", "Saltos controlados: 3x10", "Caminata Desnivel: 3x2", "Zancadas subida: 2x10"], desc: "Descanso: 1 minuto." },
-        "FUERZA": { ej: ["Sentadillas: 3x10", "Flexiones: 3x8", "Abdominales: 3x10", "Plancha: 3x20", "Activación: 3x1", "Burpees: 3x5"], desc: "Descanso: 40-60 seg." },
-        "FLEXIBILIDAD": { ej: ["Estáticos: 2x15", "Rotaciones: 2x10", "Zancadas: 2x10", "Equilibrio: 2x15", "Gato-Camello: 2x10", "Apertura cadera: 2x15"], desc: "Descanso: 20-30 seg." },
-        "ACUÁTICO": { ej: ["Caminar agua: 3x1", "Patadas tabla: 3x10", "Nado suave: 3x15m", "Nado continuo: 2x2", "Saltos agua: 3x10", "Laterales agua: 3x30"], desc: "Descanso: 30-60 seg." }
+        "CANCHA": { ej: ["Caminar: 3x1min", "Saltos de tijera: 3x15", "Rodillas al pecho: 3x20", "Pasos de lado: 3x10m", "Saltos cortos: 3x15", "Carrera rápida ida y vuelta: 3x20m"], desc: "Descanso: 30-45 segundos." },
+        "PISTA": { ej: ["Caminar y trotar: 3x1min", "Carrera rápida: 4x30m", "Correr y trotar: 3x1min", "Rodillas arriba: 3x20", "Trotar: 3x2min", "Talones al glúteo: 3x30"], desc: "Descanso: 1 minuto (en velocidad)." },
+        "MONTAÑA": { ej: ["Caminar en plano: 3x2min", "Subir cuestas cortas (completas): 3 veces", "Subir gradas (completas): 3 subidas", "Saltos suaves: 3x10", "Caminar en subida: 3x2min", "Pasos largos hacia arriba: 2x10m"], desc: "Descanso: 1 minuto." },
+        "FUERZA": { ej: ["Sentadillas: 3x10", "Lagartijas: 3x8", "Abdominales: 3x10", "Plancha: 3x20seg", "Calentamiento: 3x1min", "Salto con lagartija: 3x5"], desc: "Descanso: 40-60 seg." },
+        "FLEXIBILIDAD": { ej: ["Estiramiento fijo: 2x15", "Círculos de hombros: 2x10", "Pasos largos: 2x10", "Equilibrio en un pie: 2x15 c/pie", "Arqueo de espalda: 2x10", "Apertura de cadera: 2x15seg cada lado"], desc: "Descanso: 20-30 seg." },
+        "ACUÁTICO": { ej: ["Burbujas: 3x30", "Patadas tabla: 3x50m", "Nado suave: 3x15min", "Nado continuo (rápido): 2x5min", "Solo brazada: 3x50m", "Velocidad: 2x100m"], desc: "Descanso: 30-60 seg." }
     },
     "Principiante": {
-        "CANCHA": { ej: ["Caminar: 3x2'", "Jumping Jacks: 3x25", "Skipping: 3x40", "Laterales: 3x15m", "Saltos cortos: 3x20", "Sprint(Ida/Vuelta): 3x40"], desc: "Descanso: 30-45 segundos." },
-        "PISTA": { ej: ["Caminar-Trote: 3x2", "Trote continuo: 3x3", "Velocidad: 6x40m.", "Skipping Rodillas: 3x40", "Correr-Trotar: 4 rep", "Talones al glúteo: 3x45"], desc: "Descanso: 1 minuto (en velocidad)." },
-        "MONTAÑA": { ej: ["Caminar Llano: 3x3", "Subir Pendientes: 4 cortas", "Escaleras: 4 subidas", "Saltos controlados: 3x15", "Caminata Desnivel: 3x4", "Zancadas subida: 2x12"], desc: "Descanso: 1 minuto." },
-        "FUERZA": { ej: ["Sentadillas: 3x15", "Flexiones: 3x12", "Abdominales: 3x15", "Plancha: 3x30", "Activación: 3x2", "Burpees: 3x8"], desc: "Descanso: 40-60 seg." },
-        "FLEXIBILIDAD": { ej: ["Estáticos: 2x20", "Rotaciones: 2x15", "Zancadas: 2x12", "Equilibrio: 2x20", "Gato-Camello: 3x10", "Apertura cadera: 2x20"], desc: "Descanso: 20-30 seg." },
-        "ACUÁTICO": { ej: ["Caminar agua: 3x2", "Patadas tabla: 3x15", "Nado suave: 3x25m", "Nado continuo: 2x4", "Saltos agua: 3x15", "Laterales agua: 3x45"], desc: "Descanso: 30-60 seg." }
+        "CANCHA": { ej: ["Caminar: 3x2min", "Saltos de tijera: 3x25", "Rodillas al pecho: 3x40", "Pasos de lado: 3x15m", "Saltos cortos: 3x20", "Carrera rápida ida y vuelta: 3x40m"], desc: "Descanso: 30-45 segundos." },
+        "PISTA": { ej: ["Caminar y trotar: 3x2min", "Correr y trotar: 3x3min", "Carrera rápida: 6x40m", "Rodillas arriba: 3x40", "Trotar: 4x2min", "Talones al glúteo: 3x4"], desc: "Descanso: 1 minuto (en velocidad)." },
+        "MONTAÑA": { ej: ["Caminar en plano: 3x3min", "Subir cuestas cortas(completas): 4 veces", "Subir gradas (completas): 4 subidas", "Saltos suaves: 3x15", "Caminar en subida: 3x4min", "Pasos largos hacia arriba: 2x12m"], desc: "Descanso: 1 minuto." },
+        "FUERZA": { ej: ["Sentadillas: 3x15", "Lagartijas: 3x12", "Abdominales: 3x15", "Plancha: 3x30seg", "Calentamiento: 3x2min", "Salto con lagartija: 3x8"], desc: "Descanso: 40-60 seg." },
+        "FLEXIBILIDAD": { ej: ["Estiramiento fijo: 2x20", "Círculos de hombros: 2x15", "Pasos largos: 2x12", "Equilibrio: 2x20min", "Arqueo de espalda: 3x10", "Apertura de cadera: 2x20seg cada lado"], desc: "Descanso: 20-30 seg." },
+        "ACUÁTICO": { ej: ["Burbujas: 3x2", "Patadas tabla: 3x15m", "Nado suave: 3x25min", "Nado continuo (ráìdo): 2x4min", "Solo brazada: 2x100m", "Velocidad: 3x50m"], desc: "Descanso: 30-60 seg." }
     },
     "Intermedio": {
-        "CANCHA": { ej: ["Caminar: 3x3'", "Jumping Jacks: 4x30", "Skipping: 4x45", "Laterales: 4x20m", "Saltos cortos: 4x25", "Sprint(Ida/Vuelta): 4x45"], desc: "Descanso: 30-45 segundos." },
-        "PISTA": { ej: ["Caminar-Trote: 3x3", "Trote continuo: 3x5", "Velocidad: 8x50m.", "Skipping Rodillas: 4x45", "Correr-Trotar: 5 rep", "Talones al glúteo: 4x1"], desc: "Descanso: 1 minuto (en velocidad)." },
-        "MONTAÑA": { ej: ["Caminar Llano: 3x5", "Subir Pendientes: 5 medias", "Escaleras: 5 subidas", "Saltos controlados: 4x20", "Caminata Desnivel: 3x6", "Zancadas subida: 3x15"], desc: "Descanso: 1 minuto." },
-        "FUERZA": { ej: ["Sentadillas: 4x20", "Flexiones: 4x15", "Abdominales: 4x20", "Plancha: 4x40", "Activación: 3x3", "Burpees: 4x12"], desc: "Descanso: 40-60 seg." },
-        "FLEXIBILIDAD": { ej: ["Estáticos: 3x25", "Rotaciones: 3x15", "Zancadas: 3x15", "Equilibrio: 3x30", "Gato-Camello: 3x12", "Apertura cadera: 3x25"], desc: "Descanso: 20-30 seg." },
-        "ACUÁTICO": { ej: ["Caminar agua: 3x3", "Patadas tabla: 4x20", "Nado suave: 4x50m", "Nado continuo: 2x6", "Saltos agua: 4x20", "Laterales agua: 4x1"], desc: "Descanso: 30-60 seg." }
+        "CANCHA": { ej: ["Caminar: 3x3min", "Saltos de tijera: 4x30", "Rodillas al pecho: 4x45", "Pasos de lado: 4x20m", "Saltos cortos: 4x25", "Carrera rápida ida y vuelta: 4x45m"], desc: "Descanso: 30-45 segundos." },
+        "PISTA": { ej: ["Caminar y trotar: 3x3m", "Correr y trotar: 3x5min", "Carrera rápida: 5x40m", "Rodillas arriba: 4x45", "Trotar: 5x2min", "Talones al glúteo: 4x25"], desc: "Descanso: 1 minuto (en velocidad)." },
+        "MONTAÑA": { ej: ["Caminar en plano: 3x5min", "Subir cuestas cortas (completas): 5 veces", "Subir gradas (completas): 5 subidas", "Saltos suaves: 4x20", "Caminar en subida: 3x4min", "Pasos largos hacia arriba: 3x15m"], desc: "Descanso: 1 minuto." },
+        "FUERZA": { ej: ["Sentadillas: 4x20", "Lagartijas: 4x15", "Abdominales: 4x20", "Plancha: 4x40seg", "Calentamiento: 3x3min", "Salto con lagartija: 4x12"], desc: "Descanso: 40-60 seg." },
+        "FLEXIBILIDAD": { ej: ["Estiramiento fijo: 3x25", "Círculos de hombros: 3x15", "Pasos largos: 3x15", "Equilibrio en un pie: 3x15seg (c/pie)", "Arqueo de espalda: 3x12", "Apertura de cadera: 3x25seg cada lado"], desc: "Descanso: 20-30 seg." },
+        "ACUÁTICO": { ej: ["Burbujas: 4x30", "Patadas tabla: 3x100m", "Nado suave: 4x5min", "Nado continuo (rápido): 3x5min", "Solo brazada: 3x100m", "Velocidad: 3x100m"], desc: "Descanso: 30-60 seg." }
     },
     "Avanzado": {
-        "CANCHA": { ej: ["Caminar: 4x3'", "Jumping Jacks: 4x40", "Skipping: 4x1min", "Laterales: 4x25m", "Saltos cortos: 4x30", "Sprint(Ida/Vuelta): 4x1min"], desc: "Descanso: 30-45 segundos." },
-        "PISTA": { ej: ["Caminar-Trote: 4x3", "Trote continuo: 2x8", "Velocidad: 10x60m.", "Skipping Rodillas: 4x1min", "Correr-Trotar: 6 rep", "Talones al glúteo: 4x1.5min"], desc: "Descanso: 1 minuto (en velocidad)." },
-        "MONTAÑA": { ej: ["Caminar Llano: 2x8min", "Subir Pendientes: 6 largas", "Escaleras: 6 subidas", "Saltos controlados: 4x25", "Caminata Desnivel: 2x10min", "Zancadas subida: 4x20"], desc: "Descanso: 1 minuto." },
-        "FUERZA": { ej: ["Sentadillas: 4x25", "Flexiones: 4x20", "Abdominales: 4x25", "Plancha: 4x1min", "Activación: 4x3min", "Burpees: 4x15"], desc: "Descanso: 40-60 seg." },
-        "FLEXIBILIDAD": { ej: ["Estáticos: 3x30", "Rotaciones: 3x20", "Zancadas: 4x15", "Equilibrio: 3x40", "Gato-Camello: 3x15", "Apertura cadera: 3x30"], desc: "Descanso: 20-30 seg." },
-        "ACUÁTICO": { ej: ["Caminar agua: 4x3min", "Patadas tabla: 4x25", "Nado suave: 4x75m", "Nado continuo: 2x10min", "Saltos agua: 4x25", "Laterales agua: 4x1.5min."], desc: "Descanso: 30-60 seg." }
+        "CANCHA": { ej: ["Caminar: 4x3min", "Saltos de tijera: 4x40", "Rodillas al pecho: 5x35", "Pasos de lado: 4x25m", "Saltos cortos: 5x25", "Carrera rápida ida y vuelta: 4x1m"], desc: "Descanso: 30-45 segundos." },
+        "PISTA": { ej: ["Caminar y trotar: 4x4min", "Correr y trotar: 3x8min", "Carrera rápida: 8x40m", "Rodillas arriba: 5x40", "Trotar: 6x2min", "Talones al glúteo: 4x35"], desc: "Descanso: 1 minuto (en velocidad)." },
+        "MONTAÑA": { ej: ["Caminar en plano: 3x8min", "Subir cuestas cortas (completas): 6 veces", "Subir gradas (completas): 6 subidas", "Saltos suaves: 4x35", "Caminar en subida: 3x6min", "Pasos largos hacia arriba: 4x20m"], desc: "Descanso: 1 minuto." },
+        "FUERZA": { ej: ["Sentadillas: 4x25", "Lagartijas: 4x20", "Abdominales: 4x25", "Plancha: 4x1min", "Calentamiento: 4x3min", "Salto con lagartija: 4x15"], desc: "Descanso: 40-60 seg." },
+        "FLEXIBILIDAD": { ej: ["Estiramiento fijo: 3x35", "Círculos de hombros: 3x20", "Pasos largos: 4x15", "Equilibrio en cada pie: 3x30seg (c/pie)", "Arqueo de espalda: 3x15", "Apertura de cadera: 3x30seg cada lado"], desc: "Descanso: 20-30 seg." },
+        "ACUÁTICO": { ej: ["Burbujas: 3x40", "Patadas tabla: 4x100m", "Nado suave: 3x10min", "Nado continuo (rápido): 3x10min", "Solo brazada: 4x100m", "Velocidad: 4x100m"], desc: "Descanso: 30-60 seg." }
     }
 };
 
 
 
+// --- FUNCIÓN PRINCIPAL ---
+// --- FUNCIÓN PRINCIPAL ---
+// --- FUNCIÓN PRINCIPAL ---
 // --- FUNCIÓN PRINCIPAL ---
 function selectEx(el, categoryName) {
     // 1. Resaltar selección visual de la categoría
@@ -650,27 +709,90 @@ function selectEx(el, categoryName) {
         else if (txt.includes("Avanzado")) nivelActual = "Avanzado";
     }
 
+    // --- DICCIONARIO DE IMÁGENES CORREGIDO CON NOMBRES EXACTOS ---
+    // --- DICCIONARIO DE IMÁGENES CORREGIDO (TODOS .PNG) ---
+    const iconosRutinas = {
+        // --- CARRERA Y CAMINATA ---
+        "Caminar": "CAMINAR o TROTAR__.png",
+        "Caminar en plano": "CAMINAR o TROTAR__.png",
+        "Caminar en subida": "CAMINAR EN SUBIDA.png",
+        "Caminar y trotar": "CAMINAR o TROTAR__.png",
+        "Trotar": "CAMINAR o TROTAR__.png",
+        "Correr y trotar": "CAMINAR o TROTAR__.png",
+        "Carrera rápida": "carrera_rápida.png",
+        "Carrera rápida ida y vuelta": "carrera_rápida_ida_y_vuelta.png",
+        "Velocidad": "VELOCIDAD.png",
+        
+        // --- SALTOS Y AGILIDAD ---
+        "Saltos de tijera": "saltos_de_tijera.png",
+        "Saltos suaves": "saltos_suaves.png",
+        "Saltos cortos": "SALTOS CORTOS.png",
+        "Pasos de lado": "pasos_de_lado.png",
+        "Rodillas al pecho": "RODILLAS AL PECHO.png",
+        "Rodillas arriba": "RODILLAS AL PECHO.png",
+        "Talones al glúteo": "TALONES AL GLUTEO.png",
+
+        // --- FUERZA Y CALENTAMIENTO ---
+        "Sentadillas": "SENTADILLA.png",
+        "Lagartijas": "lagartijas.png",
+        "Abdominales": "ABDOMINALES.png",
+        "Plancha": "PLANCHA.png",
+        "Salto con lagartija": "SALTO CON LAGARTIJA.png",
+        "Calentamiento": "calentamiento.png",
+
+        // --- MONTAÑA ---
+        "Subir cuestas cortas": "SUBIR CUESTAS CORTAS.png",
+        "Subir gradas": "SUBIR GRADAS.png",
+        "Pasos largos hacia arriba": "PASOSLARGOSARRIBA.png",
+
+        // --- FLEXIBILIDAD ---
+        "Estiramiento fijo": "estiramiento_fijo.png",
+        "Círculos de hombros": "circulo_de_hombros.png",
+        "Pasos largos": "PasosLargosFlexi.png",
+        "Equilibrio en un pie": "EQUILIBRIO EN UN PIE.png",
+        "Arqueo de espalda": "ARQUEO DE ESPALDA.png",
+        "Apertura de cadera": "APERTURA DE CADERA.png",
+
+        // --- ACUÁTICO ---
+        "Burbujas": "BURBUJAS.png",
+        "Patadas tabla": "PATADAS TABLA.png",
+        "Nado suave": "NADO SUAVE O CONTINUO.png",
+        "Nado continuo": "nado_continuo.png",
+        "Solo brazada": "BRAZADA.png"
+    };
+
     // 3. Buscar datos en la DB
     const cat = categoryName.toUpperCase();
     const data = rutinasDB[nivelActual] ? rutinasDB[nivelActual][cat] : null;
 
     if (data) {
-        // 4. Generar HTML en LISTA VERTICAL (Sin Grid)
         let html = `<h3 style="text-align:center; color:#0055ff; margin:15px 0; font-size:1.1rem;">Seleccione las rutinas</h3>`;
         
-        // Contenedor principal en bloque para evitar columnas
         html += `<div id="lista-rutinas-vertical" style="display: block !important; width: 100%;">`;
         
-        data.ej.forEach((item, index) => {
-            // Creamos cada opción como una fila completa
+        data.ej.forEach((item) => {
+            // --- LÓGICA DE BÚSQUEDA CORREGIDA ---
+            // Quitamos los ":" y también lo que esté entre paréntesis para encontrar la imagen
+            const nombreLimpio = item.split(':')[0].split('(')[0].trim();
+            const rutaImagen = iconosRutinas[nombreLimpio];
+
+            // Crear el HTML de la imagen
+            const imgHTML = rutaImagen 
+                ? `<img src="${rutaImagen}" style="width:40px; height:40px; object-fit:cover; border-radius:8px; border:1px solid #00D1FF; margin-right:12px; background:white; flex-shrink:0;">` 
+                : `<div style="width:40px; margin-right:12px;"></div>`;
+
             html += `
                 <div class="rutina-fila" 
                      onclick="toggleRutinaCheck(this)" 
-                     style="display: flex; align-items: center; justify-content: space-between; background: white; padding: 15px; margin-bottom: 10px; border-radius: 12px; border: 2px solid #cceeff; cursor: pointer; transition: 0.2s;">
+                     style="display: flex; align-items: center; background: white; padding: 10px; margin-bottom: 10px; border-radius: 12px; border: 2px solid #cceeff; cursor: pointer; transition: 0.2s;">
                     
-                    <span style="font-weight: bold; color: #102A2D; font-size: 0.95rem;">${item}</span>
+                    ${imgHTML}
+
+                    <div style="flex: 1;">
+                        <span style="font-weight: bold; color: #102A2D; font-size: 0.85rem;">${item}</span>
+                    </div>
                     
-                    <div class="check-indicador" style="width: 24px; height: 24px; border: 2px solid #00D1FF; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: transparent; font-weight: bold;">
+                    <div class="check-indicador" style="width: 24px; height: 24px; border: 2px solid #00D1FF; border-radius: 6px; display: flex; align-items: center; justify-content: center; color: transparent; font-weight: bold; flex-shrink:0;">
                         ✓
                     </div>
                     
@@ -691,7 +813,7 @@ function selectEx(el, categoryName) {
         panel.innerHTML = `<p style="text-align:center; color:red;">No se encontraron ejercicios</p>`;
     }
     
-    validateSelections();
+    if(typeof validateSelections === 'function') validateSelections();
 }
 
 // Función auxiliar para manejar la selección visual y el checkbox oculto
@@ -994,6 +1116,9 @@ function rotarEntrenador() {
     const img = document.getElementById('img-entrenador');
     const texto = document.getElementById('texto-ejercicio');
     
+    // Cambiamos el total a 8 para excluir ex9.png (Arqueria)
+    const totalEx = 8; 
+
     if (!img) return;
 
     img.style.opacity = "0";
@@ -1002,21 +1127,27 @@ function rotarEntrenador() {
     setTimeout(() => {
         currentEx++;
         
+        // Si el contador pasa de 8, vuelve a la silueta inicial
         if (currentEx > totalEx) {
             img.src = "siluetadep.png";
             if(texto) texto.innerText = "FITUP CORE";
             currentEx = 0; 
         } else {
+            // Carga solo de ex1.png a ex8.png
             img.src = `ex${currentEx}.png`;
-            const labels = ["NATACIÓN", "RUNNING", "FÚTBOL", "ESCALADA", "CICLISMO", "PESAS", "YOGA", "BASKET", "ARQUERÍA"];
-            if(texto) texto.innerText = labels[currentEx - 1];
+            
+            // Lista de 8 etiquetas que coinciden con tus 8 imágenes
+            const labels = ["NATACIÓN", "RUNNING", "FÚTBOL", "ESCALADA", "CICLISMO", "PESAS", "YOGA", "BASKET"];
+            
+            if(texto && labels[currentEx - 1]) {
+                texto.innerText = labels[currentEx - 1];
+            }
         }
 
         img.style.opacity = "1";
         img.style.transform = "scale(1)";
     }, 400);
 }
-
 // Mantenemos el intervalo de 3 segundos para que sea cómodo de leer
 if(!window.trainerInterval) {
     window.trainerInterval = setInterval(rotarEntrenador, 1500);
